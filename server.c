@@ -16,58 +16,42 @@
 #include <signal.h>
 #include <sys/types.h>
 
-// unsigned char	g_byte = 0;
-static unsigned char	byte = 0;
-
-void	handle_sigusr1(int signum)
+void	handle_signal(int signum, siginfo_t *info, void *context)
 {
-	byte << 1;
+	static int				bits_count;
+	static unsigned char	c;
 
+	(void)context;
+	if (signum == SIGUSR1)
+	{
+		c = c >> 1;
+	}
+	else if (signum == SIGUSR2)
+	{
+		c = c >> 1 | 128;
+	}
+	bits_count += 1;
+	if (bits_count == 8)
+	{
+		write(1, &c, 1);
+		c = 0;
+		bits_count = 0;
+	}
+	kill(info->si_pid, SIGUSR1);
 }
-
-void	handle_sigusr2(int signum)
-{
-	byte << 1;
-}
-
-// void	handle_signal(int signum)
-// {
-// 	if (signum == SIGUSR1)
-// 	{
-// 		printf("SIGUSR1\n");
-// 	}
-// 	else if (signum == SIGUSR2)
-// 	{
-// 		printf("SIGUSR2\n");
-// 	}
-// 	// else
-// 	// 	; //	temporarily, until I have an idea what to do here!
-// }
 
 int	main(void)
 {
-	pid_t				pid;
-	struct sigaction	act1;
-	struct sigaction	act2;
+	pid_t					pid;
+	struct sigaction		sa;
 
-	//	Get and print the current process' id:
 	pid = getpid();
-	printf("%d\n", pid);
-	//	Fill structures act1:
-	act1.sa_handler = handle_sigusr1;
-	sigemptyset(&act1.sa_mask);
-	act1.sa_flags = 0;	//there's SA_SIGINFO as well, need to look it up!
-	//	Fill structures act2:
-	act2.sa_handler = handle_sigusr2;
-	sigemptyset(&act2.sa_mask);
-	act2.sa_flags = 0;	//there's SA_SIGINFO as well, need to look it up!
-	//	handle the signal SIGUSR1:
-	if (sigaction(SIGUSR1, &act1, NULL) == -1)
-		exit(1);
-	//	handle the signal SIGUSR2:
-	if (sigaction(SIGUSR2, &act2, NULL) == -1)
-		exit(1);
-	//	waiting loop for a signal
+	printf("Process ID: %d\n", pid);
+	sa.sa_sigaction = handle_signal;
+	sa.sa_flags = SA_SIGINFO;
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGUSR1, &sa, NULL);
+	sigaction(SIGUSR2, &sa, NULL);
 	while (1)
 	{
 		pause();

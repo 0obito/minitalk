@@ -16,18 +16,6 @@
 #include <signal.h>
 #include <sys/types.h>
 
-// size_t	ft_strlen(char *str)
-// {
-// 	size_t	i;
-
-// 	if (str == NULL)
-// 		exit(1);
-// 	i = 0;
-// 	while (str[i] != '\0')
-// 		i++;
-// 	return (i);
-// }
-
 int	ft_atoi(char *str)
 {
 	int	i;
@@ -39,12 +27,16 @@ int	ft_atoi(char *str)
 	res = 0;
 	while (str[i] == 32 || (str[i] <= 13 && str[i] >= 9))
 		i++;
+	if (str[i] == '+')
+		i++;
 	if (!str[i])
 		exit(1);
 	while (str[i] <= '9' && str[i] >= '0')
 	{
 		res = res * 10 + (str[i] - '0');
 		i++;
+		if (res > 4194304)
+			exit(1);
 	}
 	while (str[i] == 32 || (str[i] <= 13 && str[i] >= 9))
 		i++;
@@ -53,25 +45,41 @@ int	ft_atoi(char *str)
 	return (res);
 }
 
-int	send_char(pid_t pid, unsigned char c)
+void	ack_sig(int signum)
 {
-	int	i;
-	int	bit;
+	if (signum == SIGUSR1)
+		return ;
+}
 
+void	send_char(pid_t pid, unsigned char c)
+{
+	struct sigaction	sa;
+	int					i;
+	int					bit;
+
+	sa.sa_flags = 0;
+	sa.sa_handler = ack_sig;
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGUSR1, &sa, NULL);
 	i = 0;
 	while (i < 8)
 	{
-		bit = c % 2;
-		if (bit == 0)
-			kill(pid, SIGUSR1);
-		else
-			kill(pid, SIGUSR2);
+		bit = (int)c % 2;
 		c /= 2;
+		if (bit == 0)
+		{
+			kill(pid, SIGUSR1);
+		}
+		else
+		{
+			kill(pid, SIGUSR2);
+		}
 		i++;
+		pause();
 	}
 }
 
-int	send_str(pid_t pid, char *str)
+void	send_str(pid_t pid, char *str)
 {
 	int	i;
 
@@ -90,11 +98,13 @@ int	main(int ac, char *av[])
 	pid_t	pid;
 	char	*str;
 
-	if (ac == 3)
+	if (ac != 3)
 	{
-		pid = ft_atoi(av[1]);
-		str = av[2];
-		send_str(pid, str);
+		printf("Incorrect input!\nTry: ./client [server_pid] [string]");
+		exit(1);
 	}
+	pid = ft_atoi(av[1]);
+	str = av[2];
+	send_str(pid, str);
 	return (0);
 }
