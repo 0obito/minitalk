@@ -10,43 +10,52 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <sys/types.h>
+#include "header.h"
 
 void	handle_signal(int signum, siginfo_t *info, void *context)
 {
 	static int				bits_count;
+	static pid_t			cid;
 	static unsigned char	c;
 
 	(void)context;
-	if (signum == SIGUSR1)
+	if (cid != info->si_pid)
 	{
-		c = c >> 1;
-	}
-	else if (signum == SIGUSR2)
-	{
-		c = c >> 1 | 128;
-	}
-	bits_count += 1;
-	if (bits_count == 8)
-	{
-		write(1, &c, 1);
-		c = 0;
+		cid = info->si_pid;
 		bits_count = 0;
 	}
-	kill(info->si_pid, SIGUSR1);
+	if (signum == SIGUSR1)
+		c = c >> 1;
+	else if (signum == SIGUSR2)
+		c = c >> 1 | 128;
+	if (++bits_count == 8 && c == '\0')
+		kill(info->si_pid, SIGUSR2);
+	else
+	{
+		if (bits_count == 8)
+		{
+			write(1, &c, 1);
+			bits_count = 0;
+		}
+		kill(info->si_pid, SIGUSR1);
+	}
 }
 
-int	main(void)
+int	main(int ac, char *av[])
 {
 	pid_t					pid;
 	struct sigaction		sa;
 
+	(void)av;
+	if (ac != 1)
+	{
+		ft_putstr("Incorrect input!\nTry: ./server\n");
+		exit(1);
+	}
 	pid = getpid();
-	printf("Process ID: %d\n", pid);
+	ft_putstr("Process ID: ");
+	ft_putnbr(pid);
+	write(1, "\n", 1);
 	sa.sa_sigaction = handle_signal;
 	sa.sa_flags = SA_SIGINFO;
 	sigemptyset(&sa.sa_mask);

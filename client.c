@@ -10,57 +10,25 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <sys/types.h>
-
-int	ft_atoi(char *str)
-{
-	int	i;
-	int	res;
-
-	if (str == NULL || str[0] == '\0')
-		exit(1);
-	i = 0;
-	res = 0;
-	while (str[i] == 32 || (str[i] <= 13 && str[i] >= 9))
-		i++;
-	if (str[i] == '+')
-		i++;
-	if (!str[i])
-		exit(1);
-	while (str[i] <= '9' && str[i] >= '0')
-	{
-		res = res * 10 + (str[i] - '0');
-		i++;
-		if (res > 4194304)
-			exit(1);
-	}
-	while (str[i] == 32 || (str[i] <= 13 && str[i] >= 9))
-		i++;
-	if (str[i])
-		exit(1);
-	return (res);
-}
+#include "header.h"
 
 void	ack_sig(int signum)
 {
-	if (signum == SIGUSR1)
-		return ;
+	if (signum == SIGUSR2)
+		ft_putstr("Message well received!\n");
 }
 
 void	send_char(pid_t pid, unsigned char c)
 {
-	struct sigaction	sa;
 	int					i;
 	int					bit;
+	struct sigaction	sa;
 
 	sa.sa_flags = 0;
 	sa.sa_handler = ack_sig;
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGUSR1, &sa, NULL);
+	sigaction(SIGUSR2, &sa, NULL);
 	i = 0;
 	while (i < 8)
 	{
@@ -68,14 +36,14 @@ void	send_char(pid_t pid, unsigned char c)
 		c /= 2;
 		if (bit == 0)
 		{
-			kill(pid, SIGUSR1);
+			if (kill(pid, SIGUSR1))
+				process_error();
 		}
 		else
-		{
-			kill(pid, SIGUSR2);
-		}
+			if (kill(pid, SIGUSR2))
+				process_error();
 		i++;
-		pause();
+		usleep(500);
 	}
 }
 
@@ -84,13 +52,14 @@ void	send_str(pid_t pid, char *str)
 	int	i;
 
 	if (str == NULL)
-		exit(1);
+		string_error();
 	i = 0;
 	while (str[i])
 	{
 		send_char(pid, (unsigned char)str[i]);
 		i++;
 	}
+	send_char(pid, (unsigned char)str[i]);
 }
 
 int	main(int ac, char *av[])
@@ -100,7 +69,7 @@ int	main(int ac, char *av[])
 
 	if (ac != 3)
 	{
-		printf("Incorrect input!\nTry: ./client [server_pid] [string]");
+		ft_putstr("Incorrect input!\nTry: ./client [server_pid] [string]\n");
 		exit(1);
 	}
 	pid = ft_atoi(av[1]);
