@@ -12,6 +12,12 @@
 
 #include "header.h"
 
+void	signal_error(void)
+{
+	ft_putstr("Signal error!\n");
+	exit(1);
+}
+
 void	handle_signal(int signum, siginfo_t *info, void *context)
 {
 	static int				bits_count;
@@ -43,7 +49,6 @@ void	handle_signal(int signum, siginfo_t *info, void *context)
 
 int	main(int ac, char *av[])
 {
-	pid_t					pid;
 	struct sigaction		sa;
 
 	(void)av;
@@ -52,18 +57,17 @@ int	main(int ac, char *av[])
 		ft_putstr("Incorrect input!\nTry: ./server\n");
 		exit(1);
 	}
-	pid = getpid();
 	ft_putstr("Process ID: ");
-	ft_putnbr(pid);
+	ft_putnbr(getpid());
 	write(1, "\n", 1);
 	sa.sa_sigaction = handle_signal;
 	sa.sa_flags = SA_SIGINFO;
 	sigemptyset(&sa.sa_mask);
-	sigaction(SIGUSR1, &sa, NULL);
-	sigaction(SIGUSR2, &sa, NULL);
-	while (1)
+	if (sigaction(SIGUSR1, &sa, NULL) || sigaction(SIGUSR2, &sa, NULL))
+		signal_error();
+	while (1337)
 	{
-		pause();
+		usleep(10000);
 	}
 	return (0);
 }

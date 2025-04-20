@@ -12,6 +12,12 @@
 
 #include "header.h"
 
+void	signal_error(void)
+{
+	ft_putstr("Signal error!\n");
+	exit(1);
+}
+
 void	ack_sig(int signum)
 {
 	if (signum == SIGUSR2)
@@ -22,13 +28,7 @@ void	send_char(pid_t pid, unsigned char c)
 {
 	int					i;
 	int					bit;
-	struct sigaction	sa;
 
-	sa.sa_flags = 0;
-	sa.sa_handler = ack_sig;
-	sigemptyset(&sa.sa_mask);
-	sigaction(SIGUSR1, &sa, NULL);
-	sigaction(SIGUSR2, &sa, NULL);
 	i = 0;
 	while (i < 8)
 	{
@@ -43,7 +43,7 @@ void	send_char(pid_t pid, unsigned char c)
 			if (kill(pid, SIGUSR2))
 				process_error();
 		i++;
-		usleep(500);
+		usleep(10000);
 	}
 }
 
@@ -54,18 +54,19 @@ void	send_str(pid_t pid, char *str)
 	if (str == NULL)
 		string_error();
 	i = 0;
-	while (str[i])
+	while (str[i] != '\0')
 	{
 		send_char(pid, (unsigned char)str[i]);
 		i++;
 	}
+	send_char(pid, (unsigned char) '\n');
 	send_char(pid, (unsigned char)str[i]);
 }
 
 int	main(int ac, char *av[])
 {
-	pid_t	pid;
-	char	*str;
+	pid_t				pid;
+	struct sigaction	sa;
 
 	if (ac != 3)
 	{
@@ -73,7 +74,11 @@ int	main(int ac, char *av[])
 		exit(1);
 	}
 	pid = ft_atoi(av[1]);
-	str = av[2];
-	send_str(pid, str);
+	sa.sa_flags = 0;
+	sa.sa_handler = ack_sig;
+	sigemptyset(&sa.sa_mask);
+	if (sigaction(SIGUSR1, &sa, NULL) || sigaction(SIGUSR2, &sa, NULL))
+		signal_error();
+	send_str(pid, av[2]);
 	return (0);
 }

@@ -44,8 +44,8 @@ void	ft_putnbr(int n)
 
 int	ft_atoi(char *str)
 {
-	int	i;
-	int	res;
+	int		i;
+	long	res;
 
 	if (str == NULL || str[0] == '\0')
 		process_error();
@@ -60,7 +60,7 @@ int	ft_atoi(char *str)
 	while (str[i] <= '9' && str[i] >= '0')
 	{
 		res = res * 10 + (str[i] - '0');
-		if (res > 4194304)
+		if (res > 2147483647)
 			process_error();
 		i++;
 	}
@@ -68,7 +68,7 @@ int	ft_atoi(char *str)
 		i++;
 	if (str[i])
 		process_error();
-	return (res);
+	return ((int)res);
 }
 
 void	process_error(void)
